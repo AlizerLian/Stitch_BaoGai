@@ -1,0 +1,14 @@
+依赖项：
+opencv_core4110.lib
+opencv_imgproc4110.lib
+opencv_features2d4110.lib
+opencv_highgui4110.lib
+opencv_imgcodecs4110.lib
+opencv_xfeatures2d4110.lib
+opencv_calib3d4110.lib
+opencv_flann4110.lib
+opencv_videoio4110.lib
+opencv_tracking4110.lib
+opencv_stitching4110.lib
+---
+c++语言标准使用c++17 
