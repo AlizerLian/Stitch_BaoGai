@@ -52,8 +52,8 @@ void Est_exposure::get_rwc_images(vector<Mat>rwc_imagesf_in, vector<Mat>rwc_mask
 		images[i] = rwc_images_in[i].clone();
 		mycorner[i] = Corners_in[i];
 		images[i].copyTo(images_warped[i]);
-		rwc_masks_in[i].copyTo(masks_warped[i]);
-		masks_warped[i].convertTo(masks_warped[i], CV_8U);
+		rwc_masks_in[i].copyTo(masks_warped_f[i]);
+		masks_warped_f[i].convertTo(masks_warped_f[i], CV_8U);
 		rwc_imagesf_in[i].copyTo(images_warped_f[i]);
 	}
 }
@@ -75,7 +75,7 @@ void Est_exposure::get_feed() {
 		K(1, 1) *= swa; K(1, 2) *= swa;
 		mycorner[i] = warper->warp(images[i], K, cams[i].R, INTER_LINEAR, BORDER_REFLECT, images_warped[i]);
 		sizes[i] = images_warped[i].size();
-		warper->warp(masks[i], K, cams[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
+		warper->warp(masks[i], K, cams[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped_f[i]);
 	}
 	for (uint8_t i = 0;i < 2;++i) {
 		images_warped[i].convertTo(images_warped_f[i], CV_32F);
@@ -83,7 +83,7 @@ void Est_exposure::get_feed() {
 }
 
 void Est_exposure::fill_compensator() {
-	compensator->feed(mycorner, images_warped, masks_warped);
+	compensator->feed(mycorner, images_warped, masks_warped_f);
 	bootflag_exposure = true;
 }
 

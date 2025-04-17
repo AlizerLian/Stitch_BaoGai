@@ -47,7 +47,8 @@ public:
 	double work_scale; //接收feature线程，与图像同步
 
 	// 输出
-	vector<UMat>masks_warped{ UMat(),UMat() }; //送入seam_finder---接收seam_finder进行更新
+	vector<UMat>masks_warped{ UMat(),UMat() }; //接收seam_finder进行更新
+	vector<UMat>masks_warped_f{ UMat(),UMat() }; //送入seam_finder
 	vector<UMat>images_warped_f{ UMat(),UMat() }; //送入seam_finder---拼接缝搜索用图
 	vector<Point>mycorner{ Point(),Point() }; //协助warp--->mask_warped --- 拼接缝搜索用角点
 private:

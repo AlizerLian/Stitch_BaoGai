@@ -16,7 +16,7 @@ using namespace std;
 #define LOGLN(msg) std::cout << msg << std::endl
 #define TIME_LOG 1
 #define ORG_EXPOSE 0
-#define IsThread 0
+#define IsThread 1
 
 bool exit_flag = false; //全局退出标志（当视频流读取为空）
 
@@ -43,7 +43,7 @@ void video_input1(string path) {
     float wrap_scale;
     cv::detail::CameraParams cam_param;
     double t;
-    int i;
+    int i=0;
     while (cap.read(frame)) {
         if (exit_flag) { break; }
         i++;
@@ -330,7 +330,7 @@ void Est_exp() {
 
     LOGLN("掩码更新完成，开始补偿");
     est_seam.mtx_esS.lock();
-    est_expose.update_seamed_warpedmask(est_seam.mymask);
+    est_expose.update_seamed_warpedmask(est_seam.find_masks);
     est_seam.mtx_esS.unlock();
 
     while (1) {
@@ -352,6 +352,9 @@ void Est_exp() {
         img_queue2.mtx_corner.unlock();
         est_expose.get_images(dst1, dst2, workscale);
         est_expose.warp_compensate_img();
+        est_seam.mtx_esS.lock();
+        est_expose.update_seamed_warpedmask(est_seam.find_masks);
+        est_seam.mtx_esS.unlock();
 #if TIME_LOG   
         LOGLN("曝光处理时间 : " << (getTickCount() - t) / getTickFrequency() << " s");
 #endif 
@@ -382,7 +385,7 @@ void Est_seam() {
     LOGLN("开始搜索拼接缝");
     est_expose.mtx_esE.lock();
     for (uint8_t i = 0;i < CAMERA_NUM;++i) {
-        masks_warped_seam[i] = est_expose.masks_warped[i].clone();
+        masks_warped_seam[i] = est_expose.masks_warped_f[i].clone();
         images_warped_seam[i] = est_expose.images_warped_f[i].clone();
     }
     corners = est_expose.mycorner;
@@ -393,7 +396,7 @@ void Est_seam() {
         if (exit_flag) { break; }
         est_expose.mtx_esE.lock();
         for (uint8_t i = 0; i < CAMERA_NUM; ++i) {
-            masks_warped_seam[i] = est_expose.masks_warped[i].clone();
+            masks_warped_seam[i] = est_expose.masks_warped_f[i].clone();
             images_warped_seam[i] = est_expose.images_warped_f[i].clone();
         }
         corners = est_expose.mycorner;
@@ -408,8 +411,8 @@ void Est_seam() {
 int main() {
 #if IsThread
     LOGLN("System supports " << thread::hardware_concurrency() << " concurrent threads.");
-    thread video1_input_thread(video_input1, "left.mp4");//left video1 load_1
-    thread video2_input_thread(video_input2, "right.mp4");//right video2 load_2
+    thread video1_input_thread(video_input1, "../video1.mp4");//left video1 load_1
+    thread video2_input_thread(video_input2, "../video2.mp4");//right video2 load_2
     thread feature1_thread(find_feature_1);
     thread feature2_thread(find_feature_2);
     thread match_thread(match_feature);
