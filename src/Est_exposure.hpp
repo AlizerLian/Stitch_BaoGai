@@ -19,9 +19,7 @@
 #include "opencv2/stitching/detail/seam_finders.hpp"
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
-#include <vector>
-#include <iostream>
-#include <cmath>
+#include <filesystem>
 
 using namespace cv;
 using namespace cv::detail;
@@ -52,6 +50,7 @@ public:
 	vector<UMat>images_warped_f{ UMat(),UMat() }; //送入seam_finder---拼接缝搜索用图
 	vector<Point>mycorner{ Point(),Point() }; //协助warp--->mask_warped --- 拼接缝搜索用角点
 private:
+	int id = 0;
 	// 接收输入
 	std::vector<cv::Mat>images{ Mat(),Mat() }; //读外部输入image
 
@@ -97,6 +96,8 @@ private:
 	void get_feed(); //获取曝光器初始化参数
 	void init_compensator(); //初始化曝光器
 	void fill_compensator(); //填充曝光器，生成增益矩阵
+	void save_leftwarpedmask_in(); //保存接收掩码
+	void save_rightwarpedmask_in();
 };
 
 

@@ -14,7 +14,7 @@ using namespace std;
 
 #define CAMERA_NUM 2
 #define LOGLN(msg) std::cout << msg << std::endl
-#define TIME_LOG 1
+#define TIME_LOG 0
 #define ORG_EXPOSE 0
 #define IsThread 1
 
@@ -409,7 +409,7 @@ void Est_seam() {
 }
 // 结构调整------------------------------------------------------------------------------------------
 ///////////////////////////////////////input thread////////////////////////////////////////////////////
-void video_input_thread(const string& path, Video_Capture* vid, const string& camName) {
+void video_input_thread(const string& path, Video_Capture* vid, const string& camName, Match_Features* fea_match) {
     VideoCapture cap(path);
     if (!cap.isOpened()) {
         LOGLN("无法打开视频文件!");
@@ -431,11 +431,11 @@ void video_input_thread(const string& path, Video_Capture* vid, const string& ca
         if (frame.empty()) continue;
         vid->org_push(frame);
         //warp
-        unique_lock<mutex> lk_cameras(feature_match.mtx_cameras);
-        wrap_flag = feature_match.boot_flag;
+        unique_lock<mutex> lk_cameras(fea_match->mtx_cameras);
+        wrap_flag = fea_match->boot_flag;
         if (wrap_flag > 0) {
-            wrap_scale = feature_match.warped_image_scale;
-            feature_match.copy_camera(cam_param, feature_match.cameras[0]);
+            wrap_scale = fea_match->warped_image_scale;
+            fea_match->copy_camera(cam_param, fea_match->cameras[0]);
         }
         lk_cameras.unlock();
         if (wrap_flag > 0) {
@@ -545,7 +545,7 @@ void stitch_thread(Est_exposure* exposed, graph_blender* gbl) {
             masks_blend_s[i] = exposed->mask_warped_blend[i].clone();
         }
         gbl->update_source(images_blend_s, masks_blend_s, exposed->corners, exposed->sizes);
-        est_expose.mtx_esE.unlock();
+        exposed->mtx_esE.unlock();
         gbl->graph_blend();
 
         auto end = chrono::high_resolution_clock::now();
@@ -580,29 +580,32 @@ void expose_thread(Video_Capture* vid[], Find_Feature* fea[], Est_exposure* expo
     lk_cameras.unlock();
     LOGLN("相机参数获取，初始化曝光器");
     // 曝光器第一次更新------------------------------------------------------------------------
-    vid[0]->rwc_pop(dst1);
-    vid[0]->rwc_pop(dst2);
-    fea[0]->mtx_feature.lock();
-    workscale = fea[0]->work_scale;
-    fea[0]->mtx_feature.unlock();
-    vid[0]->mtx_corner.lock();
-    warped_masks.push_back(vid[0]->mask_warped.clone());
-    corners.push_back(vid[0]->corners);
-    images_warped.push_back(vid[0]->img_warped.clone());
-    vid[0]->mtx_corner.unlock();
-    vid[1]->mtx_corner.lock();
-    warped_masks.push_back(vid[1]->mask_warped.clone());
-    corners.push_back(vid[1]->corners);
-    images_warped.push_back(vid[1]->img_warped.clone());
-    vid[1]->mtx_corner.unlock();
-    matched->mtx_cameras.lock();
-    matched->copy_cameras(cams, matched->cameras);
-    warped_img_scale = matched->warped_image_scale;
-    feature_match.mtx_cameras.unlock();
-    exposed->get_cams(cams, warped_img_scale);
-    exposed->get_images(dst1, dst2, workscale);
-    exposed->get_rwc_images(vector<Mat>{dst1, dst2}, warped_masks, corners, images_warped);
-    exposed->exposure_compensator_update_withrwc(); // 更新曝光器
+    while (1) {
+        if (vid[0]->rwc_pop(dst1) && vid[1]->rwc_pop(dst2)) {
+            fea[0]->mtx_feature.lock();
+            workscale = fea[0]->work_scale;
+            fea[0]->mtx_feature.unlock();
+            vid[0]->mtx_corner.lock();
+            warped_masks.push_back(vid[0]->mask_warped.clone());
+            corners.push_back(vid[0]->corners);
+            images_warped.push_back(vid[0]->img_warped.clone());
+            vid[0]->mtx_corner.unlock();
+            vid[1]->mtx_corner.lock();
+            warped_masks.push_back(vid[1]->mask_warped.clone());
+            corners.push_back(vid[1]->corners);
+            images_warped.push_back(vid[1]->img_warped.clone());
+            vid[1]->mtx_corner.unlock();
+            matched->mtx_cameras.lock();
+            matched->copy_cameras(cams, matched->cameras);
+            warped_img_scale = matched->warped_image_scale;
+            matched->mtx_cameras.unlock();
+            exposed->get_cams(cams, warped_img_scale);
+            exposed->get_images(dst1, dst2, workscale);
+            exposed->get_rwc_images(vector<Mat>{dst1, dst2}, warped_masks, corners, images_warped);
+            exposed->exposure_compensator_update_withrwc(); // 更新曝光器
+            break;
+        }
+    }
     // end--------------------------------------------------------------------------------------
     LOGLN("等待拼接缝搜索，更新掩码");
     unique_lock<mutex>lk_seam(seammed->mtx_esS);
@@ -610,34 +613,25 @@ void expose_thread(Video_Capture* vid[], Find_Feature* fea[], Est_exposure* expo
         seammed->cond.wait(lk_seam);
     }
     lk_seam.unlock();
-
     LOGLN("掩码更新完成，开始补偿");
     seammed->mtx_esS.lock();
-    est_expose.update_seamed_warpedmask(seammed->find_masks);
-    est_seam.mtx_esS.unlock();
+    exposed->update_seamed_warpedmask(seammed->find_masks);
+    seammed->mtx_esS.unlock();
 
     while (1) {
         if (exit_flag) { break; }
 
         t = getTickCount();
-        vid[0]->org_pop(dst1);
-        vid[1]->org_pop(dst2);
-        fea[0]->mtx_feature.lock();
-        workscale = fea[0]->work_scale;
-        fea[0]->mtx_feature.unlock();
-        vid[0]->mtx_corner.lock();
-        warped_masks.push_back(vid[0]->mask_warped.clone());
-        corners.push_back(vid[0]->corners);
-        vid[0]->mtx_corner.unlock();
-        vid[1]->mtx_corner.lock();
-        warped_masks.push_back(vid[1]->mask_warped.clone());
-        corners.push_back(vid[1]->corners);
-        vid[1]->mtx_corner.unlock();
-        exposed->get_images(dst1, dst2, workscale);
-        exposed->warp_compensate_img();
-        seammed->mtx_esS.lock();
-        exposed->update_seamed_warpedmask(seammed->find_masks);
-        seammed->mtx_esS.unlock();
+        if (vid[0]->org_pop(dst1) && vid[1]->org_pop(dst2)) {
+            fea[0]->mtx_feature.lock();
+            workscale = fea[0]->work_scale;
+            fea[0]->mtx_feature.unlock();
+            exposed->get_images(dst1, dst2, workscale);
+            exposed->warp_compensate_img();
+            seammed->mtx_esS.lock();
+            exposed->update_seamed_warpedmask(seammed->find_masks);
+            seammed->mtx_esS.unlock();
+        }
 #if TIME_LOG   
         LOGLN("曝光处理时间 : " << (getTickCount() - t) / getTickFrequency() << " s");
 #endif 
@@ -687,7 +681,7 @@ void seam_thread(Est_exposure* exposed, Est_seamm* seammed) {
 int main() {
 #if IsThread
     // 调整结构后----------------------------------------------------------------------------
-    /*Video_Capture vid[CAMERA_NUM];
+   /* Video_Capture vid[CAMERA_NUM];
     Find_Feature fea[CAMERA_NUM];
     Match_Features fea_match;
     Est_exposure ese;
@@ -713,8 +707,8 @@ int main() {
     camname[1] = "cam2";
 
     LOGLN("System supports " << thread::hardware_concurrency() << " concurrent threads.");
-    thread input1Thread(video_input_thread, ref(path[0]), pvid[0], ref(camname[0]));
-    thread input2Thread(video_input_thread, ref(path[1]), pvid[1], ref(camname[1]));
+    thread input1Thread(video_input_thread, ref(path[0]), pvid[0], ref(camname[0]), pfea_match);
+    thread input2Thread(video_input_thread, ref(path[1]), pvid[1], ref(camname[1]), pfea_match);
     thread fea1Thread(feature_find_thread, pvid[0], pfea[0]);
     thread fea2Thread(feature_find_thread, pvid[1], pfea[1]);
     thread matchThread(fea_match_thread, pfea, pfea_match);
@@ -729,7 +723,7 @@ int main() {
     matchThread.join();
     exposeThread.join();
     seamThread.join();
-    stitchThread.join(); */
+    stitchThread.join(); */ 
     // end------------------------------------------------------------------------------------
 
     thread video1_input_thread(video_input1, "../video1.mp4");//left video1 load_1

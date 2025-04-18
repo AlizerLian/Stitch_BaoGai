@@ -2,7 +2,7 @@
 
 void Est_exposure::init_all() {
 	compensator = ExposureCompensator::createDefault(expos_comp_type);
-	init_compensator();
+	//init_compensator();
 }
 
 void Est_exposure::get_cams(vector<detail::CameraParams>input_cams, float input_warped_scale) {
@@ -56,6 +56,9 @@ void Est_exposure::get_rwc_images(vector<Mat>rwc_imagesf_in, vector<Mat>rwc_mask
 		masks_warped_f[i].convertTo(masks_warped_f[i], CV_8U);
 		rwc_imagesf_in[i].copyTo(images_warped_f[i]);
 	}
+	save_leftwarpedmask_in();
+	save_rightwarpedmask_in();
+	id++;
 }
 
 void Est_exposure::get_feed() {
@@ -83,7 +86,12 @@ void Est_exposure::get_feed() {
 }
 
 void Est_exposure::fill_compensator() {
-	compensator->feed(mycorner, images_warped, masks_warped_f);
+	try {
+		compensator->feed(mycorner, images_warped, masks_warped_f);
+	}
+	catch (const cv::Exception& e) {
+		std::cerr << "OpenCV Exception caught: " << e.what() << std::endl;
+	}
 	bootflag_exposure = true;
 }
 
@@ -158,10 +166,35 @@ void Est_exposure::warp_compensate_img() {
 		img.release();
 		mask.release();
 		masks_warped[i].convertTo(masks_warped[i], CV_8U);
-		dilate(masks_warped[i], dilate_mask, Mat());
+		try {
+			dilate(masks_warped[i], dilate_mask, Mat());
+		}
+		catch (const cv::Exception& e) {
+			std::cerr << "OpenCV Exception caught: " << e.what() << std::endl;
+		}
 		resize(dilate_mask, seam_mask, mask_warped.size(), 0, 0, INTER_LINEAR_EXACT);
 		mask_warped_blend[i] = seam_mask & mask_warped;
+		//cout << mask_warped_blend[i].size() << endl;
+		//cout << img_warped_s[i].size() << endl;
 	}
 	bootflag_exposure_done = true;
 	cond.notify_all();
+}
+
+void Est_exposure::save_leftwarpedmask_in() {
+	std::string base_dir = "../seam_mask";
+	std::filesystem::create_directories(base_dir);
+	std::stringstream ss;
+	ss << base_dir << "/left" << id << ".jpg";
+	std::string filename = ss.str();
+	cv::imwrite(filename, masks_warped_f[0]);
+}
+
+void Est_exposure::save_rightwarpedmask_in() {
+	std::string base_dir = "../seam_mask";
+	std::filesystem::create_directories(base_dir);
+	std::stringstream ss;
+	ss << base_dir << "/right" << id << ".jpg";
+	std::string filename = ss.str();
+	cv::imwrite(filename, masks_warped_f[1]);
 }
