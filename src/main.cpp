@@ -29,7 +29,32 @@ Est_exposure est_expose;
 Est_seamm est_seam;
 graph_blender blend_item;
 
-
+///////////////////////////////////////yaml//////////////////////////////////////////////////////
+string filename = "../stereo_calib1.yaml";
+FileStorage fs(filename, FileStorage::READ);
+Mat camera_matrix_left, dist_left;
+Mat camera_matrix_right, dist_right;
+Mat R, T;
+string video_address1, video_address2;
+int camera_num;
+fs["camera_matrix_left"] >> camera_matrix_left;
+fs["dist_left"] >> dist_left;
+fs["camera_matrix_right"] >> camera_matrix_right;
+fs["dist_right"] >> dist_right;
+fs["R"] >> R;
+fs["T"] >> T;
+fs["video_address"]["address1"] >> video_address1;
+fs["video_address"]["address2"] >> video_address2;
+fs["camera_num"] >> camera_num;
+/*cout << camera_matrix_left << endl;
+cout << dist_left << endl;
+cout << camera_matrix_right << endl;
+cout << dist_right << endl;
+cout << R << endl;
+cout << T << endl;
+cout << video_address1 << endl;
+cout << video_address2 << endl;
+cout << camera_num << endl;*/
 ///////////////////////////////////////thread1////////////////////////////////////////////////////
 void video_input1(string path) {
     VideoCapture cap(path);
