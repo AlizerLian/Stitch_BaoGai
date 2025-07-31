@@ -9,6 +9,8 @@
 #include <atomic>
 #include <chrono>
 #include <opencv2/core/ocl.hpp>
+#include "Motion.h"
+
 using namespace cv;
 using namespace std;
 
@@ -19,7 +21,7 @@ using namespace std;
 #define IsThread 1
 
 bool exit_flag = false; //全局退出标志（当视频流读取为空）
-
+Motion motion;
 Video_Capture img_queue1;
 Video_Capture img_queue2;
 Find_Feature feature1;
@@ -29,32 +31,6 @@ Est_exposure est_expose;
 Est_seamm est_seam;
 graph_blender blend_item;
 
-///////////////////////////////////////yaml//////////////////////////////////////////////////////
-string filename = "../stereo_calib1.yaml";
-FileStorage fs(filename, FileStorage::READ);
-Mat camera_matrix_left, dist_left;
-Mat camera_matrix_right, dist_right;
-Mat R, T;
-string video_address1, video_address2;
-int camera_num;
-fs["camera_matrix_left"] >> camera_matrix_left;
-fs["dist_left"] >> dist_left;
-fs["camera_matrix_right"] >> camera_matrix_right;
-fs["dist_right"] >> dist_right;
-fs["R"] >> R;
-fs["T"] >> T;
-fs["video_address"]["address1"] >> video_address1;
-fs["video_address"]["address2"] >> video_address2;
-fs["camera_num"] >> camera_num;
-/*cout << camera_matrix_left << endl;
-cout << dist_left << endl;
-cout << camera_matrix_right << endl;
-cout << dist_right << endl;
-cout << R << endl;
-cout << T << endl;
-cout << video_address1 << endl;
-cout << video_address2 << endl;
-cout << camera_num << endl;*/
 ///////////////////////////////////////thread1////////////////////////////////////////////////////
 void video_input1(string path) {
     VideoCapture cap(path);
@@ -704,6 +680,31 @@ void seam_thread(Est_exposure* exposed, Est_seamm* seammed) {
 }
 /////////////////////////////////////// main ////////////////////////////////////////////////////////
 int main() {
+
+    LOGLN("左内参" << motion.camera_matrix_left);
+    LOGLN("左畸变" << motion.dist_left);
+    LOGLN("右内参" << motion.camera_matrix_right);
+    LOGLN("右畸变" << motion.dist_right);
+    LOGLN("旋转" << motion.R);
+    LOGLN("平移" << motion.T);
+
+    LOGLN("线程？" << motion.Is_Thread);
+    LOGLN("调试？" << motion.Is_Log);
+    LOGLN("相机数" << motion.camera_num);
+    LOGLN("视频1"  << motion.video_address1);
+    LOGLN("视频2" << motion.video_address2);
+
+    LOGLN("投影器:" << motion.Warper_Type);
+
+    LOGLN("曝光器:" << motion.Exposure_Type);
+    LOGLN("曝光器更新？:" << motion.Expourse_Upgrade);
+    LOGLN("曝光器时间间隔:" << motion.Exposure_time);
+    LOGLN("曝光器帧数间隔:" << motion.Exposure_Num);
+
+    LOGLN("拼接缝查找器:" << motion.SeamFinder_Type);
+    LOGLN("拼接缝更新？:" << motion.Seam_Upgrade);
+    LOGLN("拼接缝查找时间间隔:" << motion.Seam_time);
+    LOGLN("拼接缝查找帧数间隔:" << motion.Seam_Num);
 #if IsThread
     // 调整结构后----------------------------------------------------------------------------
    /* Video_Capture vid[CAMERA_NUM];
@@ -751,8 +752,10 @@ int main() {
     stitchThread.join(); */ 
     // end------------------------------------------------------------------------------------
 
-    thread video1_input_thread(video_input1, "../video1.mp4");//left video1 load_1
-    thread video2_input_thread(video_input2, "../video2.mp4");//right video2 load_2
+    //thread video1_input_thread(video_input1, "../video1.mp4");//left video1 load_1
+    //thread video2_input_thread(video_input2, "../video2.mp4");//right video2 load_2
+    thread video1_input_thread(video_input1, motion.video_address1);//left video1 load_1
+    thread video2_input_thread(video_input2, motion.video_address2);//right video2 load_2
     thread feature1_thread(find_feature_1);
     thread feature2_thread(find_feature_2);
     thread match_thread(match_feature);

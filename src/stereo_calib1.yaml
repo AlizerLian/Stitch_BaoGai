@@ -1,0 +1,65 @@
+%YAML:1.0
+---
+camera_matrix_right: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 2.9708375475985832e+02, 0., 2.7990386288660073e+02, 0.,
+       2.9892883000791056e+02, 2.3938920186161772e+02, 0., 0., 1. ]
+dist_right: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ -4.1059969400591097e-02, 7.1382618782877369e-02,
+       2.0739425658762673e-03, -1.6027623638672692e-02,
+       -4.8685981483246828e-02 ]
+camera_matrix_left: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 3.1889300079940074e+02, 0., 3.4891769313814382e+02, 0.,
+       3.0870658821125119e+02, 2.6863376773389831e+02, 0., 0., 1. ]
+dist_left: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ -5.1379631921575984e-02, 6.0833306196654939e-02,
+       -3.7606222708293402e-03, -1.2963907139589935e-02,
+       -4.9612084773403134e-02 ]
+R: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 8.2510274226364999e-01, -4.5659780865110876e-02,
+       5.6313466339797869e-01, 2.6196966646010574e-02,
+       9.9874885351293430e-01, 4.2596320793550899e-02,
+       -5.6437503811521694e-01, -2.0393921102851750e-02,
+       8.2526656562258605e-01 ]
+T: !!opencv-matrix
+   rows: 3
+   cols: 1
+   dt: d
+   data: [ 6.3859914308691131e+01, -3.7415922677768045e+00,
+       -6.5973789741118081e+00 ]
+
+video_address: 
+   address1: ../video1.mp4
+   address2: ../video2.mp4
+
+camera_num: 3
+
+Is_Thread:        true
+Is_Log:           true
+Seam_Upgrade:     true
+Expourse_Upgrade: true
+ 
+SeamFinder_Type:  "gc_color" #"no,voronoi,gc_color,gc_colorgrad,dp_color,dp_colorgrad"
+Exposure_Type:    "GAIN_BLOCKS"        #"GAIN,GAIN_BLOCKS,CHANNELS,CHANNELS_BLOCKS"
+Warper_Type:      "spherial"           #"spherial,plane,cylindrical"
+Blender_Type:     "MULTI_BAND"         #"MULTI_BAND,FEATHER"
+
+Seam_Num:      0
+Exposure_Num:  0
+Seam_time:     0
+Exposure_time: 0
+ 
