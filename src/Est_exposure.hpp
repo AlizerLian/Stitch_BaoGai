@@ -19,22 +19,30 @@
 #include "opencv2/stitching/detail/seam_finders.hpp"
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
-#include <filesystem>
+#include <vector>
+#include <iostream>
+#include <cmath>
 
 using namespace cv;
 using namespace cv::detail;
 using namespace std;
 
+typedef struct blend_union {
+	Mat blend_img1,blend_img2;
+	Mat blend_mask1,blend_mask2;
+};
+
 class Est_exposure {
 // 第一轮调用，初始化变量
 public:
 	// 辅助变量
+	atomic<bool> exit_flag{ false };
 	mutex mtx_esE;
 	condition_variable cond;
 	bool bootflag_exposure = false; //第一轮boot标识
 	Ptr<ExposureCompensator> compensator; //曝光器
+	Ptr<detail::RotationWarper> warper;
 	Ptr<WarperCreator> warper_creator = makePtr<cv::SphericalWarper>(); //两轮都用到
-	Ptr<detail::RotationWarper> warper; //两轮都用到，接收creater
 	
 	// 接收输入
 	vector<detail::CameraParams>cams{
@@ -50,7 +58,6 @@ public:
 	vector<UMat>images_warped_f{ UMat(),UMat() }; //送入seam_finder---拼接缝搜索用图
 	vector<Point>mycorner{ Point(),Point() }; //协助warp--->mask_warped --- 拼接缝搜索用角点
 private:
-	int id = 0;
 	// 接收输入
 	std::vector<cv::Mat>images{ Mat(),Mat() }; //读外部输入image
 
@@ -69,13 +76,19 @@ private:
 public:
 	// 输出
 	bool bootflag_exposure_done = false; //第二轮boot标识
+	bool corners_done_flag = false; //角点可读取标识
+	bool graph_done_flag = false; //图像及掩码可读取标识
 	vector<Mat>img_warped_s{ Mat(),Mat() }; //blend使用，曝光后img
 	vector<Mat>mask_warped_blend{ Mat(),Mat() }; //blend使用，配套变形后掩码
+	vector<Mat>use_imgs{ Mat(),Mat() }; //存储blend使用图像
+	vector<Mat>use_masks{ Mat(),Mat() }; //存储blend使用掩码
+	queue<blend_union> blend_queue; //存储blend使用图像
 	vector<Size>sizes{ Size(),Size() }; //存储compose_scale
 	vector<Point>corners; //存储compose角点
 private:
 	// 中间变量
 	bool is_compose_scale_set = false; //一次调用变为true，确定compose_scale
+	bool blend_OK = false; //防止在更新曝光时进行拼接
 	BlocksCompensator* bcompensator; //曝光器指针
 	int expos_comp_type = ExposureCompensator::GAIN_BLOCKS; //曝光器类型
 	int expos_comp_nr_feeds = 1;
@@ -92,12 +105,45 @@ public:
 	void warp_compensate_img(); //应用曝光器，接收返回掩码后才能正常工作
 	void update_seamed_warpedmask(vector<UMat>warpedmasks_in); //接收seam_finder返回掩码
 	void exposure_compensator_update_withrwc();
-private:
 	void get_feed(); //获取曝光器初始化参数
+	// blend_union队列相关函数 ----------------------------------
+	mutex mtx_bu;
+	const uint8_t blend_max_size = 1000;
+	void blend_union_push(const blend_union& frame) {
+		unique_lock<mutex> lock(mtx_bu);
+		//阻塞
+		//cond.wait(lock, [this] { return rwc_queue.size() < max_size; });
+		//非阻塞
+		if (blend_queue.size() >= blend_max_size) {
+			blend_queue.pop();
+		}
+		blend_queue.push(bu_clone(frame));  // 深拷贝防止数据竞争
+		cond.notify_one();
+	};
+	bool blend_union_pop(blend_union& frame) {
+		unique_lock<mutex> lock(mtx_bu);
+		cond.wait_for(lock, 1s, [this] { return !blend_queue.empty() || exit_flag; });
+
+		if (blend_queue.empty() || exit_flag)
+			return false;
+
+		frame = bu_clone(blend_queue.front());  // 深拷贝
+		blend_queue.pop();
+		cond.notify_one();
+		return true;
+	};
+	// end ------------------------------------------------------
+private:
 	void init_compensator(); //初始化曝光器
 	void fill_compensator(); //填充曝光器，生成增益矩阵
-	void save_leftwarpedmask_in(); //保存接收掩码
-	void save_rightwarpedmask_in();
+	blend_union bu_clone(const blend_union& bu) {
+		blend_union thisone;
+		thisone.blend_img1 = bu.blend_img1.clone();
+		thisone.blend_img2 = bu.blend_img2.clone();
+		thisone.blend_mask1 = bu.blend_mask1.clone();
+		thisone.blend_mask2 = bu.blend_mask2.clone();
+		return thisone;
+	}
 };
 
 

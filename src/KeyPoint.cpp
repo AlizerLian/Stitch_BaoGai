@@ -104,11 +104,11 @@ void Match_Features::est_params() {
 	cameras_temp[0].focal = 3.1889300079940074e+02f;
 	cameras_temp[0].ppx = 3.4891769313814382e+02f;
 	cameras_temp[0].ppy = 2.6863376773389831e+02f;
-	cameras_temp[0].aspect = 3.0870658821125119e+02f /3.1889300079940074e+02f ;
+	cameras_temp[0].aspect = 3.0870658821125119e+02f / 3.1889300079940074e+02f;
 	cameras_temp[0].t = t1.clone();
 	cameras_temp[0].R = R1.clone();
 
-	cameras_temp[1].aspect =2.9892883000791056e+02 / 2.9708375475985832e+02;
+	cameras_temp[1].aspect = 2.9892883000791056e+02 / 2.9708375475985832e+02;
 	cameras_temp[1].focal = 2.9708375475985832e+02;
 	cameras_temp[1].ppx = 2.7990386288660073e+02f;
 	cameras_temp[1].ppy = 2.3938920186161772e+02f;
@@ -124,24 +124,24 @@ void Match_Features::est_params() {
 	Mat R2 = K1.inv() * H * K2;
 	cameras_temp[1].R = R1 * R2;*/
 
-/*
-	Ptr<detail::BundleAdjusterBase> adjuster;
-	adjuster = makePtr<detail::BundleAdjusterRay>();
-	adjuster->setConfThresh(conf_thresh);
-	Mat_<uchar> refine_mask = Mat::zeros(3, 3, CV_8U);
-	refine_mask(0, 0) = 1;
-	refine_mask(0, 1) = 1;
-	refine_mask(0, 2) = 1;
-	refine_mask(1, 1) = 1;
-	refine_mask(1, 2) = 1;
-	adjuster->setRefinementMask(refine_mask);
-	if (!(*adjuster)(features, pairwise_matches, cameras_temp))
-	{
-		cout << "Camera parameters adjusting failed.\n";
-		return;
-	}*/
+	/*
+		Ptr<detail::BundleAdjusterBase> adjuster;
+		adjuster = makePtr<detail::BundleAdjusterRay>();
+		adjuster->setConfThresh(conf_thresh);
+		Mat_<uchar> refine_mask = Mat::zeros(3, 3, CV_8U);
+		refine_mask(0, 0) = 1;
+		refine_mask(0, 1) = 1;
+		refine_mask(0, 2) = 1;
+		refine_mask(1, 1) = 1;
+		refine_mask(1, 2) = 1;
+		adjuster->setRefinementMask(refine_mask);
+		if (!(*adjuster)(features, pairwise_matches, cameras_temp))
+		{
+			cout << "Camera parameters adjusting failed.\n";
+			return;
+		}*/
 
-	// waveCorrect 
+		// waveCorrect 
 	vector<Mat> rmats;
 	for (size_t i = 0; i < cameras_temp.size(); ++i)
 		rmats.push_back(cameras_temp[i].R.clone());

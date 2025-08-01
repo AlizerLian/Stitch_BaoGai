@@ -14,12 +14,18 @@ namespace fs = std::filesystem;
 using namespace std;
 using namespace cv;
 
+typedef struct rwc_org
+{
+    Mat rwc;
+    Mat org;
+};
+
 class Video_Capture {
 private:
     condition_variable cond;
-    const size_t org_max_size = 100;  // ·ÀÖ¹ÄÚ´æÒç³ö
+    const size_t org_max_size = 1000;  // ·ÀÖ¹ÄÚ´æÒç³ö
     float seam_work_aspect = 0.5f;
-    const size_t rwc_max_size = 10;
+    const size_t rwc_max_size = 1000;
     Ptr<WarperCreator> warper_creator = makePtr<cv::SphericalWarper>();
 
 public:
@@ -28,6 +34,7 @@ public:
     mutex mtx_corner;
     queue<Mat> org_queue;
     queue<Mat> rwc_queue;
+    queue<rwc_org> rwc_org_queue;
     atomic<bool> exit_flag{ false };
     Point corners;
     Mat mask_warped;
@@ -38,6 +45,24 @@ public:
     bool org_pop(Mat& img);
     void rwc_push(const Mat& img);
     bool rwc_pop(Mat& img);
+    void rwc_org_push(const rwc_org& ro);
+    bool rwc_org_pop(rwc_org& ro);
+    rwc_org ro_clone(const rwc_org& ro) {
+        rwc_org thisone;
+        thisone.org = ro.org.clone();  // Éî¿½±´
+        thisone.rwc = ro.rwc.clone();  // Éî¿½±´
+        return thisone;
+    }
+    bool rwc_is_empty() {
+        return rwc_queue.empty();
+    }
+    bool org_is_empty() {
+        return org_queue.empty();
+    }
+    bool org_rwc_empty() {
+        return rwc_org_queue.empty();
+    }
+
     Mat warpedmask_get() {
         if (mask_warped.empty()) {
             cout << "error---warped mask haven't done";

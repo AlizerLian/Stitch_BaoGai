@@ -51,6 +51,7 @@ private:
 	// 函数
 	void try_blend(); //进行融合
 	void draw_result(); //保存结果
+	void save_maskresult(); //保存标记拼接缝结果
 };
 
 #endif // !BLENDIMG_H

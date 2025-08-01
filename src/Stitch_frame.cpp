@@ -1,5 +1,6 @@
 #include "Stitch_frame.hpp"
 
+// 更新融合图像，掩码，角点，尺寸信息
 void graph_blender::update_source(vector<Mat>img_warped_s_in, vector<Mat>mask_warped_in, vector<Point>corner_in, vector<Size>size_in) {
 	for (uint8_t i = 0;i < 2;++i) {
 		images_warped[i] = img_warped_s_in[i].clone();
@@ -11,6 +12,7 @@ void graph_blender::update_source(vector<Mat>img_warped_s_in, vector<Mat>mask_wa
 	}
 }
 
+// 融合外部调用函数
 void graph_blender::graph_blend() {
 	try_blend();
 	id++;
@@ -24,6 +26,7 @@ void graph_blender::graph_blend() {
 
 }
 
+// 融合函数，包含融合器初始化与图像融合
 void graph_blender::try_blend() {
 	Ptr<Blender>blender;
 	blender = Blender::createDefault(blend_type, try_cuda);
@@ -32,7 +35,7 @@ void graph_blender::try_blend() {
 	if (blend_width < 1.f) {
 		blender = Blender::createDefault(Blender::NO, try_cuda);
 	}
-	else if(blend_type == Blender::MULTI_BAND){
+	else if (blend_type == Blender::MULTI_BAND) {
 		MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(blender.get());
 		if (mb) {
 			mb->setNumBands(static_cast<int>(ceil(log(blend_width) / log(2.)) - 1.));
@@ -76,16 +79,18 @@ void graph_blender::try_blend() {
 	result = result(cropRect);
 }
 
+// 存单帧结果图，未裁剪
 void graph_blender::draw_result() {
 	string outpath = "result.jpg";
 	imwrite(outpath, result);
 }
 
+// 存结果图，裁剪
 void graph_blender::save_img() {
 	std::string base_dir = "../out_lab";
 	std::filesystem::create_directories(base_dir);
 	std::stringstream ss;
-	ss << base_dir <<"/" << id << ".jpg";
+	ss << base_dir << "/" << id << ".jpg";
 	std::string filename = ss.str();
 	cv::imwrite(filename, result);
 }

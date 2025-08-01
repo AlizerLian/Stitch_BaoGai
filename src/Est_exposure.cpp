@@ -1,10 +1,13 @@
 #include "Est_exposure.hpp"
 
+// 初始化曝光器 --- 老函数，后面应该没用到
 void Est_exposure::init_all() {
+	compensator.reset();
 	compensator = ExposureCompensator::createDefault(expos_comp_type);
-	//init_compensator();
+	init_compensator();
 }
 
+// 获取相机参数
 void Est_exposure::get_cams(vector<detail::CameraParams>input_cams, float input_warped_scale) {
 	for (uint8_t i = 0;i < 2;++i) {
 		cams[i].ppx = input_cams[i].ppx;
@@ -17,12 +20,14 @@ void Est_exposure::get_cams(vector<detail::CameraParams>input_cams, float input_
 	warped_imagescale = input_warped_scale;
 }
 
+// 更新拼接掩码
 void Est_exposure::update_seamed_warpedmask(vector<UMat>warpedmasks_in) {
 	for (uint8_t i = 0;i < 2;++i) {
 		masks_warped[i] = warpedmasks_in[i].clone();
 	}
 }
 
+// 获取原始图像
 void Est_exposure::get_images(const Mat& input_image1, const Mat& input_image2, double workscale) {
 	images.clear();
 	std::vector<Mat> emptyGains;
@@ -32,6 +37,7 @@ void Est_exposure::get_images(const Mat& input_image1, const Mat& input_image2, 
 	work_scale = workscale;
 }
 
+// 由原始图像更新曝光器
 void Est_exposure::exposure_compensator_update() {
 	get_feed();
 	init_compensator();
@@ -40,6 +46,7 @@ void Est_exposure::exposure_compensator_update() {
 	cond.notify_all();
 }
 
+// 由已矫正图像更新曝光器
 void Est_exposure::exposure_compensator_update_withrwc() {
 	init_compensator();
 	fill_compensator();
@@ -47,6 +54,7 @@ void Est_exposure::exposure_compensator_update_withrwc() {
 	cond.notify_all();
 }
 
+// 获取已矫正图像
 void Est_exposure::get_rwc_images(vector<Mat>rwc_imagesf_in, vector<Mat>rwc_masks_in, vector<Point>Corners_in, vector<Mat>rwc_images_in) {
 	for (uint8_t i = 0;i < 2;++i) {
 		images[i] = rwc_images_in[i].clone();
@@ -56,18 +64,14 @@ void Est_exposure::get_rwc_images(vector<Mat>rwc_imagesf_in, vector<Mat>rwc_mask
 		masks_warped_f[i].convertTo(masks_warped_f[i], CV_8U);
 		rwc_imagesf_in[i].copyTo(images_warped_f[i]);
 	}
-	save_leftwarpedmask_in();
-	save_rightwarpedmask_in();
-	id++;
 }
 
-void Est_exposure::get_feed() {
+// 由原始图像获取曝光器参数
+void Est_exposure::get_feed() { 
 	for (uint8_t i = 0;i < 2;++i) {
 		masks[i].create(images[i].size(), CV_8U);
 		masks[i].setTo(Scalar::all(255));
 	}
-
-	Ptr<detail::RotationWarper> warper;
 	double seam_scale = min(1.0, sqrt(seam_megapix * 1e-6 / images[0].size().area()));
 	warper = warper_creator->create(static_cast<float>(warped_imagescale * seam_work_aspect));
 	for (uint8_t i = 0;i < 2;++i) {
@@ -85,16 +89,13 @@ void Est_exposure::get_feed() {
 	}
 }
 
+// 填充曝光器
 void Est_exposure::fill_compensator() {
-	try {
-		compensator->feed(mycorner, images_warped, masks_warped_f);
-	}
-	catch (const cv::Exception& e) {
-		std::cerr << "OpenCV Exception caught: " << e.what() << std::endl;
-	}
+	compensator->feed(mycorner, images_warped, masks_warped_f);
 	bootflag_exposure = true;
 }
 
+// 初始化曝光器
 void Est_exposure::init_compensator() {
 	bcompensator = dynamic_cast<BlocksCompensator*>(compensator.get());
 	bcompensator->setNrFeeds(expos_comp_nr_feeds);
@@ -102,12 +103,14 @@ void Est_exposure::init_compensator() {
 	bcompensator->setBlockSize(expos_comp_block_size, expos_comp_block_size);
 }
 
+// 曝光补偿并处理拼接掩码信息 --- 主要应用函数
 void Est_exposure::warp_compensate_img() {
 	Mat fullimg;Mat img;Mat img_warped;Mat mask_warped;Mat mask;
 	Mat seam_mask;Mat dilate_mask;
 	for (uint8_t i = 0;i < 2;++i) {
 		fullimg = images[i].clone();
 		if (!is_compose_scale_set) {
+			corners_done_flag = false;
 			corners.clear();
 			sizes.clear();
 			compose_scale = min(1.0, sqrt(compose_megapix * 1e6 / fullimg.size().area()));
@@ -129,6 +132,7 @@ void Est_exposure::warp_compensate_img() {
 				Rect roi = warper->warpRoi(sz, K, cams[ii].R);
 				corners.push_back(roi.tl());
 				sizes.push_back(roi.size());
+				corners_done_flag = true;
 			}
 		}
 		if (abs(compose_scale - 1) > 1e-1) {
@@ -166,35 +170,34 @@ void Est_exposure::warp_compensate_img() {
 		img.release();
 		mask.release();
 		masks_warped[i].convertTo(masks_warped[i], CV_8U);
-		try {
-			dilate(masks_warped[i], dilate_mask, Mat());
-		}
-		catch (const cv::Exception& e) {
-			std::cerr << "OpenCV Exception caught: " << e.what() << std::endl;
-		}
+		dilate(masks_warped[i], dilate_mask, Mat());
 		resize(dilate_mask, seam_mask, mask_warped.size(), 0, 0, INTER_LINEAR_EXACT);
 		mask_warped_blend[i] = seam_mask & mask_warped;
-		//cout << mask_warped_blend[i].size() << endl;
-		//cout << img_warped_s[i].size() << endl;
 	}
+	graph_done_flag = false;
+	for (uint8_t i = 0;i < 2;i++) {
+		use_imgs[i] = img_warped_s[i].clone();
+		use_masks[i] = mask_warped_blend[i].clone();
+	}
+	cout << "One time done" << endl;
+	graph_done_flag = true;
+	/*cv::imwrite("../out/warp_img1.jpg", img_warped_s[0]);
+	cv::imwrite("../out/warp_img2.jpg", img_warped_s[1]);
+	cv::imwrite("../out_mask/mask_left.jpg", mask_warped_blend[0]);
+	cv::imwrite("../out_mask/mask_right.jpg", mask_warped_blend[1]);*/
+	/*
+	// blend_union赋值 -------------------------------------------------
+	blend_union this_one;
+	this_one.blend_img1 = img_warped_s[0].clone();
+	this_one.blend_img2 = img_warped_s[1].clone();
+	this_one.blend_mask1 = mask_warped_blend[0].clone();
+	this_one.blend_mask2 = mask_warped_blend[1].clone();
+	blend_union_push(this_one);
+	std::cout << "push到blend_union" << endl;
+	// end -------------------------------------------------------------
+	*/
+	is_compose_scale_set = false;
 	bootflag_exposure_done = true;
 	cond.notify_all();
 }
 
-void Est_exposure::save_leftwarpedmask_in() {
-	std::string base_dir = "../seam_mask";
-	std::filesystem::create_directories(base_dir);
-	std::stringstream ss;
-	ss << base_dir << "/left" << id << ".jpg";
-	std::string filename = ss.str();
-	cv::imwrite(filename, masks_warped_f[0]);
-}
-
-void Est_exposure::save_rightwarpedmask_in() {
-	std::string base_dir = "../seam_mask";
-	std::filesystem::create_directories(base_dir);
-	std::stringstream ss;
-	ss << base_dir << "/right" << id << ".jpg";
-	std::string filename = ss.str();
-	cv::imwrite(filename, masks_warped_f[1]);
-}

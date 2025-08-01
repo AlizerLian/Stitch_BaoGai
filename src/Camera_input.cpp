@@ -52,6 +52,30 @@ bool Video_Capture::rwc_pop(Mat& frame) {
     return true;
 }
 
+void Video_Capture::rwc_org_push(const rwc_org& frame) {
+    unique_lock<mutex> lock(mtx_rwc);
+    //×èÈû
+    //cond.wait(lock, [this] { return rwc_queue.size() < max_size; });
+    //·Ç×èÈû
+    if (rwc_org_queue.size() >= rwc_max_size) {
+        rwc_queue.pop();
+    }
+    rwc_org_queue.push(ro_clone(frame));  // Éî¿½±´·ÀÖ¹Êý¾Ý¾ºÕù
+    cond.notify_one();
+}
+
+bool Video_Capture::rwc_org_pop(rwc_org& frame) {
+    unique_lock<mutex> lock(mtx_rwc);
+    cond.wait_for(lock, 1s, [this] { return !rwc_org_queue.empty() || exit_flag; });
+
+    if (rwc_org_queue.empty() || exit_flag)
+        return false;
+
+    frame = ro_clone(rwc_org_queue.front());  // Éî¿½±´
+    rwc_org_queue.pop();
+    cond.notify_one();
+    return true;
+}
 
 void Video_Capture::warp(const Mat& frame, detail::CameraParams camera, float warped_image_scale) {
     try {
@@ -87,7 +111,11 @@ void Video_Capture::warp(const Mat& frame, detail::CameraParams camera, float wa
         //LOGLN(img_warped.size());
         Mat img_warped_f;
         img_warped.convertTo(img_warped_f, CV_32F);
+        rwc_org this_one;
+        this_one.org = frame;
+        this_one.rwc = img_warped_f;
         rwc_push(img_warped_f);
+        rwc_org_push(this_one);
     }
     catch (const cv::Exception& e) {
         std::cerr << "-----OpenCV Error: " << e.what() << std::endl;
