@@ -20,6 +20,7 @@
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
 #include <filesystem>
+#include <condition_variable>
 
 using namespace cv;
 using namespace cv::detail;

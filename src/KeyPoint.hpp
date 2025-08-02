@@ -3,7 +3,7 @@
 #include "Camera_input.hpp"
 #include <vector>
 #include <filesystem>
-#include <opencv2/xfeatures2d.hpp>
+#include <opencv2/features2d.hpp>
 #include <condition_variable>
 #include "opencv2/opencv_modules.hpp"
 #include <opencv2/core/utility.hpp>
@@ -50,7 +50,7 @@ public:
 	void find(const cv::Mat& img);
 	void draw_points();
 	//output
-	detail::ImageFeatures get_feature() {// Éî¿½±´ feature
+	detail::ImageFeatures get_feature() {// ï¿½î¿½ï¿½ï¿½ feature
 		cv::detail::ImageFeatures feature_copy;
 		feature_copy.keypoints = feature.keypoints;
 		feature_copy.descriptors = feature.descriptors.clone();
@@ -77,18 +77,18 @@ public:
 	condition_variable cond;
 	//params
 	bool try_cuda = false;
-	float match_conf = 0.5f;		//Ô½´ó£¬µãÆ¥ÅäÔ½ÑÏÀ÷
-	float conf_thresh = 0.5f;		//²»ÒªÌ«¸ß£¬·ñÔò·ÇÏßÐÔÓÅ»¯ÎÞ·¨ÊÕÁ²
+	float match_conf = 0.5f;		//Ô½ï¿½ó£¬µï¿½Æ¥ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½
+	float conf_thresh = 0.5f;		//ï¿½ï¿½ÒªÌ«ï¿½ß£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å»ï¿½ï¿½Þ·ï¿½ï¿½ï¿½ï¿½ï¿½
 public:
 	//input
-	void update_features_imgs(vector<detail::ImageFeatures> features, const vector<cv::Mat>& imgs);		//¿½±´ÓÃÓÚÆ¥ÅäµÄÌØÕ÷ºÍÍ¼Æ¬
+	void update_features_imgs(vector<detail::ImageFeatures> features, const vector<cv::Mat>& imgs);		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼Æ¬
 	//process
-	void match();		//Æ¥ÅäÌØÕ÷µã
-	void est_params();		//¹À¼ÆÏà»ú²ÎÊý£¨K¡¢R¡¢T£©
-	void show_matches();		//Æ¥Åä½á¹û¿ÉÊÓ»¯
+	void match();		//Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	void est_params();		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Kï¿½ï¿½Rï¿½ï¿½Tï¿½ï¿½
+	void show_matches();		//Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó»ï¿½
 	//output
 	void log_matchinfo();
-	void copy_cameras(vector<detail::CameraParams>& cameras_dst, vector<detail::CameraParams>& cameras_src);		//¸üÐÂÏà»ú²ÎÊý
+	void copy_cameras(vector<detail::CameraParams>& cameras_dst, vector<detail::CameraParams>& cameras_src);		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	void copy_camera(detail::CameraParams& camera_dst, detail::CameraParams& camera_src);
 private:
 	mutex mtx_match;
@@ -102,7 +102,7 @@ private:
 };
 
 
-//ºóÐøÔÚ¿¼ÂÇ·â×°³É¶ÓÁÐ
+//ï¿½ï¿½ï¿½ï¿½ï¿½Ú¿ï¿½ï¿½Ç·ï¿½×°ï¿½É¶ï¿½ï¿½ï¿½
 /*
 class CameraParamsQueue {
 public:

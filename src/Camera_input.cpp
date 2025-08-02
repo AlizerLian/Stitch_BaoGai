@@ -3,13 +3,13 @@
 void Video_Capture::org_push(const cv::Mat& frame) {
     //unique_lock<mutex> lock(mtx_org);
     mtx_org.lock();
-    //×èÈû
+    //
     //cond.wait(lock, [this] { return org_queue.size() < max_size; });
-    //·Ç×èÈû
+    //
     if (org_queue.size() >= org_max_size) {
         org_queue.pop();
     }
-    org_queue.push(frame.clone());  // Éî¿½±´·ÀÖ¹Êı¾İ¾ºÕù
+    org_queue.push(frame.clone());  // ???
     mtx_org.unlock();
     cond.notify_one();
 }
@@ -29,13 +29,13 @@ bool Video_Capture::org_pop(Mat& frame) {
 
 void Video_Capture::rwc_push(const cv::Mat& frame) {
     unique_lock<mutex> lock(mtx_rwc);
-    //×èÈû
+    //
     //cond.wait(lock, [this] { return rwc_queue.size() < max_size; });
-    //·Ç×èÈû
+    //
     if (rwc_queue.size() >= rwc_max_size) {
         rwc_queue.pop();
     }
-    rwc_queue.push(frame.clone());  // Éî¿½±´·ÀÖ¹Êı¾İ¾ºÕù
+    rwc_queue.push(frame.clone());  // ???
     cond.notify_one();
 }
 

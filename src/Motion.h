@@ -3,7 +3,7 @@
 #define __Motion_h__
 #include <vector>
 #include <filesystem>
-#include <opencv2/xfeatures2d.hpp>
+#include <opencv2/features2d.hpp>
 #include <condition_variable>
 #include "opencv2/opencv_modules.hpp"
 #include <opencv2/core/utility.hpp>
@@ -25,15 +25,15 @@ class Motion
 {
 public:
 	string yaml_path = "../stereo_calib1.yaml";
-	Mat camera_matrix_left, dist_left;                               //×óÏà»úÄÚ²Î£¬»û±ä
-	Mat camera_matrix_right, dist_right;                             //ÓÒÏà»úÄÚ²Î£¬»û±ä
-	Mat R, T;														 //Ðý×ª£¬Æ½ÒÆ¾ØÕó
-	string video_address1, video_address2;                           //ÊÓÆµµØÖ·
-	int camera_num;													 //Ïà»úÊýÁ¿
-	string SeamFinder_Type, Exposure_Type, Warper_Type,Blender_Type; //Æ´½Ó·ì²éÕÒÆ÷£¬ÆØ¹âÆ÷£¬Í¶Ó°Æ÷£¬ÈÚºÏÆ÷ÀàÐÍ	
-	bool Is_Thread,Seam_Upgrade,Expourse_Upgrade,Is_Log;             //ÊÇ·ñ ¶àÏß³Ì£¬Æ´½Ó·ì¸üÐÂ£¬ÆØ¹âÆ÷¸üÐÂ£¬´òÓ¡µ÷ÊÔÐÅÏ¢
-	int Seam_Num, Exposure_Num;										 //Æ´½Ó·ì£¬ÆØ¹âÆ÷¸üÐÂÖ¡Êý¼ä¸ô
-	int Seam_time, Exposure_time;                                    //Æ´½Ó·ì£¬ÆØ¹âÆ÷¸üÐÂÊ±¼ä¼ä¸ô 
+	Mat camera_matrix_left, dist_left;                               //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú²Î£ï¿½ï¿½ï¿½ï¿½ï¿½
+	Mat camera_matrix_right, dist_right;                             //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú²Î£ï¿½ï¿½ï¿½ï¿½ï¿½
+	Mat R, T;														 //ï¿½ï¿½×ªï¿½ï¿½Æ½ï¿½Æ¾ï¿½ï¿½ï¿½
+	string video_address1, video_address2;                           //ï¿½ï¿½Æµï¿½ï¿½Ö·
+	int camera_num;													 //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	string SeamFinder_Type, Exposure_Type, Warper_Type,Blender_Type; //Æ´ï¿½Ó·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¹ï¿½ï¿½ï¿½ï¿½ï¿½Í¶Ó°ï¿½ï¿½ï¿½ï¿½ï¿½Úºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½	
+	bool Is_Thread,Seam_Upgrade,Expourse_Upgrade,Is_Log;             //ï¿½Ç·ï¿½ ï¿½ï¿½ï¿½ß³Ì£ï¿½Æ´ï¿½Ó·ï¿½ï¿½ï¿½Â£ï¿½ï¿½Ø¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â£ï¿½ï¿½ï¿½Ó¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
+	int Seam_Num, Exposure_Num;										 //Æ´ï¿½Ó·ì£¬ï¿½Ø¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¡ï¿½ï¿½ï¿½ï¿½ï¿½
+	int Seam_time, Exposure_time;                                    //Æ´ï¿½Ó·ì£¬ï¿½Ø¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ 
 	Motion();
 };
 #endif
